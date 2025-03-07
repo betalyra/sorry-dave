@@ -1,0 +1,17 @@
+{
+    "extends": "@total-typescript/tsconfig/tsc/no-dom/app", // For an app
+    "compilerOptions": {
+        "lib": [
+            "DOM",
+            "ESNext"
+        ],
+        "target": "ESNext",
+        "module": "ESNext",
+        "moduleResolution": "Node",
+        "strict": true,
+        "esModuleInterop": true,
+        "skipLibCheck": false,
+        "forceConsistentCasingInFileNames": true,
+        "verbatimModuleSyntax": false
+    }
+}

@@ -1,0 +1,25 @@
+{
+  "name": "casl-test",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "dev": "tsx --watch src/index.ts",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@casl/ability": "^6.7.3",
+    "@standard-schema/spec": "^1.0.0",
+    "effect": "^3.13.6",
+    "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "@total-typescript/tsconfig": "^1.0.4",
+    "tsx": "^4.19.3",
+    "typescript": "5.8.2"
+  },
+  "type": "module"
+}
