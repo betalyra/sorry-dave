@@ -8,9 +8,8 @@ class MyError extends Data.Error<{ message: string }> {}
 
 type CapabilitiesCheck = (object: any) => Effect.Effect<boolean> | boolean;
 
-type Key = [string, string];
 type ICapabilities = {
-  capabilities: Map<Key, CapabilitiesCheck>;
+  capabilities: Map<string, CapabilitiesCheck>;
 };
 
 class Capabilities extends Context.Tag("Capabilities")<
@@ -19,10 +18,10 @@ class Capabilities extends Context.Tag("Capabilities")<
 >() {}
 
 const gen = (
-  genCapabilities: () => Generator<[Key, CapabilitiesCheck]>
-): Effect.Effect<Map<Key, CapabilitiesCheck>> =>
+  genCapabilities: () => Generator<[string, CapabilitiesCheck]>
+): Effect.Effect<Map<string, CapabilitiesCheck>> =>
   Effect.gen(function* () {
-    const capabilities = new Map<Key, CapabilitiesCheck>();
+    const capabilities = new Map<string, CapabilitiesCheck>();
     yield* Effect.logDebug("Generating capabilities");
     for (const [action, check] of genCapabilities()) {
       yield* Effect.logDebug("Adding capability", action);
@@ -31,21 +30,20 @@ const gen = (
     return capabilities;
   });
 
-const isAllowed = <A extends string, Key extends string, O>(
+const isAllowed = <A extends string, O>(
   action: A,
-  object: Key,
-  item: O
+  object: O
 ): Effect.Effect<void, MyError, Capabilities> =>
   Effect.gen(function* () {
     yield* Effect.log("Can", action, object);
     const capabilities = yield* Capabilities;
-    const check = capabilities.capabilities.get([action, object]);
+    const check = capabilities.capabilities.get(action);
     if (!check) {
       return yield* Effect.fail(
         new MyError({ message: "Capability not found" })
       );
     }
-    const resultEffect = check(item);
+    const resultEffect = check(object);
     if (Effect.isEffect(resultEffect)) {
       const result = yield* resultEffect;
       if (!result) {
@@ -64,22 +62,16 @@ const isAllowed = <A extends string, Key extends string, O>(
     return;
   });
 
-const can = function* <
-  A extends string,
-  O extends string,
-  S extends StandardSchemaV1
->(
+const can = function* <A extends string, S extends StandardSchemaV1>(
   action: A,
-  object: O,
   schema: S,
   check?: (
     input: StandardSchemaV1.InferInput<S>
   ) => Effect.Effect<void, MyError, Capabilities> | boolean
-): Generator<[Key, CapabilitiesCheck], undefined, undefined> {
-  const key: Key = [action, object] as const;
+): Generator<[typeof action, CapabilitiesCheck], undefined, undefined> {
   const result = check
-    ? ([key, check] as [Key, CapabilitiesCheck])
-    : ([key, () => Effect.succeed(true)] as [Key, CapabilitiesCheck]);
+    ? ([action, check] as [A, CapabilitiesCheck])
+    : ([action, () => Effect.succeed(true)] as [A, CapabilitiesCheck]);
   yield result;
   return;
 };
@@ -98,14 +90,13 @@ const capabilitiesForUser = (userId: string) =>
       yield* Effect.logDebug("Creating capabilities for user", userId);
 
       const capabilities = yield* gen(function* () {
-        yield* can("read", "Article", Article);
+        yield* can("read", Article);
         yield* can(
           "update",
-          "Article",
           Article,
           (article: Article) => article.authorId === userId
         );
-        yield* can("delete", "Article", Article, (article: Article) =>
+        yield* can("delete", Article, (article: Article) =>
           Effect.succeed(article.authorId === userId)
         );
       });
@@ -120,7 +111,7 @@ const capabilities = capabilitiesForUser("1");
 
 const program = (article: Article) =>
   Effect.gen(function* () {
-    yield* isAllowed("read", "Article", article);
+    yield* isAllowed("update", article);
     yield* Effect.log("Article read", article);
   });
 
