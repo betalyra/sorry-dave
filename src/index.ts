@@ -1,5 +1,4 @@
 import { Context, Data, Effect, Either, Layer, Logger, LogLevel } from "effect";
-import { YieldWrap } from "effect/Utils";
 import type { StandardSchemaV1 } from "@standard-schema/spec";
 
 import { z } from "zod";

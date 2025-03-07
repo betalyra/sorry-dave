@@ -1,46 +1,41 @@
-import * as Effect from "effect/Effect";
-import * as Context from "effect/Context";
-import * as Option from "effect/Option";
-import * as Layer from "effect/Layer";
+// Generator that takes a key parameter and expects records with that key
+import { StandardSchemaV1 } from "@standard-schema/spec";
+import { z } from "zod";
 
-// Types of resources we want to protect
-type ResourceType = "article" | "organization" | "comment";
-
-// Possible actions on resources
-type Action = "read" | "write" | "delete" | "create";
-
-// Generic permission check result
-interface PermissionCheckAllowed {
-  type: "allowed";
+function* can<T extends Record<`${string}-${string}`, StandardSchemaV1>>(
+  key: keyof T
+): Generator<string, undefined, T> {
+  yield `Can ${key as string}`;
+  return;
 }
 
-interface PermissionCheckDenied {
-  type: "denied";
-  reason: string;
-}
+const gen =
+  <T extends Record<string, StandardSchemaV1>>(record: T) =>
+  (genCapabilities: () => Generator<string, void, T>) => {
+    const it = genCapabilities();
 
-type PermissionCheckResult = PermissionCheckAllowed | PermissionCheckDenied;
+    let items = [];
+    while (true) {
+      const next = it.next(record);
+      if (next.done) {
+        break;
+      }
+      items.push(next.value);
+    }
+    return items;
+  };
 
-// Generic capability check type that works with Effect
-type CapabilityCheck<R = never> = (
-  userId: string,
-  resourceId: string
-) => Effect.Effect<PermissionCheckResult, Error, R>;
+const Article = z.object({ article: z.literal("article") });
+const Blog = z.object({ blog: z.literal("blog") });
 
-// Core capability function type with resource and action
-interface Capability<R = never> {
-  resourceType: ResourceType;
-  action: Action;
-  check: CapabilityCheck<R>;
-}
+const article = { article: "article" as const };
+const blog = { blog: "blog" as const };
 
-// Helper to create capability functions
-const createCapability = <R>(
-  resourceType: ResourceType,
-  action: Action,
-  check: CapabilityCheck<R>
-): Capability<R> => ({
-  resourceType,
-  action,
-  check,
-});
+const result = gen({ "read-article": Article, "read-blog": Blog })(
+  function* () {
+    yield* can("read-article");
+    yield* can("read-blog");
+  }
+);
+
+console.log(result);
