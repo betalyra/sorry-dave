@@ -36,11 +36,14 @@ const Blog = z.object({ blog: z.literal("blog") });
 const article = { article: "article" as const };
 const blog = { blog: "blog" as const };
 
-const result = gen({ "read-article": Article, "read-blog": Blog })(
-  function* () {
-    yield* can("read-article", (input) => input.article === "article");
-    yield* can("read-blog", (input) => input.blog === "blog");
-  }
-);
+const result = gen({
+  "read-article": Article,
+  "read-blog": Blog,
+  "write-article": Article,
+})(function* () {
+  yield* can("read-article", (input) => input.article === "article");
+  yield* can("read-blog", (input) => input.blog === "blog");
+  yield* can("write-article", (input) => input.article === "article");
+});
 
 console.log(result);
