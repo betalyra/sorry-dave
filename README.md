@@ -38,6 +38,16 @@ yarn add @betalyra/sorry-dave
 
 ## Getting started
 
+sorry-dave consists of three building blocks:
+
+* **Schema registry**: Maps your domain objects to resource identifiers
+* **Capabilities**: Defines what your entity (usually the user) is allowed to do and under what conditions
+* **Check**: A check used in your program to validate that your entity (user) has sufficient permissions
+
+Let's go through them:
+
+### 1. Schema
+
 Declare a schema for your capabilities using any [standard-schema](https://github.com/standard-schema/standard-schema) compliant library, e.g. [zod](https://zod.dev/).
 
 ```ts
@@ -62,7 +72,9 @@ const registry = register({
 });
 ```
 
-Next, define a set of capabilities from the registry that your entity (the user) has.
+### 2. Capabilities
+
+Now that we have our registry up and running, let's define a set of capabilities that your entity (the user) has.
 ```ts
 const capabilities = (user: User) =>
     define(registry)(function* () {
@@ -74,7 +86,9 @@ const capabilities = (user: User) =>
     });
 ```
 
-Validate if the user has access to a resource by yielding the check
+### 3. Check
+
+Finally we can check within our program whether the entity is allowed to perform certain actions:
 
 **Valid case**
 ```ts
