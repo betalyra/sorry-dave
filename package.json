@@ -8,7 +8,7 @@
     "dev": "tsx --watch src/index.ts",
     "build": "tsc",
     "ability": "tsx src/ability.ts",
-    "test": "vitest"
+    "test": "vitest  --disable-console-intercept "
   },
   "keywords": [
     "authorisation",

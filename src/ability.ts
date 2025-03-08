@@ -3,15 +3,19 @@ import { Data, Effect, Either } from "effect";
 
 export type Check = (
   input: StandardSchemaV1.InferInput<StandardSchemaV1>
-) => boolean;
+) => boolean | Effect.Effect<boolean>;
 
 export function* can<
   T extends Record<`${string}-${string}`, StandardSchemaV1<any, any>>,
-  K extends keyof T
+  K extends keyof T,
+  E = never
 >(
   key: K,
-  // @ts-ignore
-  check?: (input: StandardSchemaV1.InferInput<T[K]>) => boolean
+
+  check?: (
+    // @ts-ignore
+    input: StandardSchemaV1.InferInput<T[K]>
+  ) => boolean | Effect.Effect<boolean, E>
 ): Generator<[K, Check], undefined, T> {
   const c = (check ?? (() => true)) as Check;
   yield [key, c];
@@ -47,10 +51,12 @@ export type CheckResult = {
 export class Denied extends Data.Error<{ key: string; message: string }> {}
 
 export const check =
-  <T extends Record<string, StandardSchemaV1>>(capabilities: Capabilities<T>) =>
+  <E, T extends Record<string, StandardSchemaV1>>(
+    capabilities: Capabilities<T>
+  ) =>
   (
     genCapabilities: () => Generator<[string, any], void, T>
-  ): Effect.Effect<CheckResult, Denied> =>
+  ): Effect.Effect<CheckResult, Denied | E> =>
     Effect.gen(function* () {
       const it = genCapabilities();
 
@@ -63,10 +69,17 @@ export const check =
           break;
         }
         const [key, item] = next.value;
-        const check = checks.get(key);
-        if (check) {
-          passed.push(key);
-          canResult = canResult && check(item);
+        const maybeCheck = checks.get(key);
+        if (maybeCheck) {
+          const result = maybeCheck(item);
+          if (Effect.isEffect(result)) {
+            const check = yield* result;
+            passed.push(key);
+            canResult = canResult && check;
+          } else {
+            passed.push(key);
+            canResult = canResult && result;
+          }
         }
         if (!canResult) {
           yield* new Denied({ key, message: `Denied: ${key}` });
