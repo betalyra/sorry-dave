@@ -1,11 +1,11 @@
-// Generator that takes a key parameter and expects records with that key
 import { StandardSchemaV1 } from "@standard-schema/spec";
-import { Data, Effect } from "effect";
-import { z } from "zod";
+import { Data, Effect, Either } from "effect";
 
-type Check = (input: StandardSchemaV1.InferInput<StandardSchemaV1>) => boolean;
+export type Check = (
+  input: StandardSchemaV1.InferInput<StandardSchemaV1>
+) => boolean;
 
-function* can<
+export function* can<
   T extends Record<`${string}-${string}`, StandardSchemaV1<any, any>>,
   K extends keyof T
 >(
@@ -18,7 +18,7 @@ function* can<
   return;
 }
 
-const gen =
+export const define =
   <T extends Record<string, StandardSchemaV1>>(capabilities: T) =>
   (genCapabilities: () => Generator<[string, Check], void, T>) => {
     const it = genCapabilities();
@@ -35,18 +35,18 @@ const gen =
     return { checks, capabilities };
   };
 
-type Capabilities<T extends Record<string, StandardSchemaV1>> = {
+export type Capabilities<T extends Record<string, StandardSchemaV1>> = {
   checks: Map<string, Check>;
   capabilities: T;
 };
 
-type CheckResult = {
+export type CheckResult = {
   passed: string[];
 };
 
-class Denied extends Data.Error<{ key: string; message: string }> {}
+export class Denied extends Data.Error<{ key: string; message: string }> {}
 
-const check =
+export const check =
   <T extends Record<string, StandardSchemaV1>>(capabilities: Capabilities<T>) =>
   (
     genCapabilities: () => Generator<[string, any], void, T>
@@ -75,7 +75,7 @@ const check =
       return { passed };
     });
 
-function* allowed<
+export function* allowed<
   T extends Record<`${string}-${string}`, StandardSchemaV1<any, any>>,
   K extends keyof T,
   // @ts-ignore
@@ -84,38 +84,3 @@ function* allowed<
   yield [key, item];
   return;
 }
-const Article = z.object({
-  article: z.literal("article"),
-  authorId: z.string(),
-});
-const Blog = z.object({ blog: z.literal("blog") });
-
-const blog = { blog: "blog" as const };
-
-const User = z.object({
-  id: z.string(),
-});
-type User = z.infer<typeof User>;
-
-const user = { id: "1" };
-const article = { article: "article" as const, authorId: "2" };
-
-const allCapabilities = {
-  "read-article": Article,
-  "read-blog": Blog,
-  "write-article": Article,
-};
-const capabilities = (user: User) =>
-  gen(allCapabilities)(function* () {
-    yield* can("read-article");
-    yield* can("read-blog");
-    yield* can("write-article", (input) => input.authorId === user.id);
-  });
-
-const checkResult = check(capabilities(user))(function* () {
-  yield* allowed("read-article", article);
-  yield* allowed("write-article", article);
-});
-
-const result = await Effect.runPromise(checkResult.pipe(Effect.either));
-console.log(result);
