@@ -72,14 +72,9 @@ export const check =
         const maybeCheck = checks.get(key);
         if (maybeCheck) {
           const result = maybeCheck(item);
-          if (Effect.isEffect(result)) {
-            const check = yield* result;
-            passed.push(key);
-            canResult = canResult && check;
-          } else {
-            passed.push(key);
-            canResult = canResult && result;
-          }
+          const check = Effect.isEffect(result) ? yield* result : result;
+          passed.push(key);
+          canResult = canResult && check;
         }
         if (!canResult) {
           yield* new Denied({ key, message: `Denied: ${key}` });
