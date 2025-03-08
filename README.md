@@ -67,10 +67,22 @@ const capabilities = (user: User) =>
 
 Check if the user has access to the resource.
 
+**Valid case**
 ```ts
 const user = { id: "1" };
 const article = { article: "article" as const, authorId: "1" };
 // Will fail with a Denied error if the user does not have access to the resource
+yield* check(capabilities(user))(function* () {
+  yield* allowed("read-article", article);
+  yield* allowed("write-article", article);
+});
+```
+
+**Invalid case**
+```ts
+const user = { id: "1" };
+const article = { article: "article" as const, authorId: "2" };
+// Will fail with a Denied error
 yield* check(capabilities(user))(function* () {
   yield* allowed("read-article", article);
   yield* allowed("write-article", article);
