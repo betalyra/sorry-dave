@@ -1,6 +1,11 @@
 import { StandardSchemaV1 } from "@standard-schema/spec";
 import { Data, Effect, Either } from "effect";
 
+export type Registry = Record<
+  `${Lowercase<string>}-${Lowercase<string>}`,
+  StandardSchemaV1
+>;
+
 export type Check = (
   input: StandardSchemaV1.InferInput<StandardSchemaV1>
 ) => boolean | Effect.Effect<boolean>;
@@ -23,7 +28,7 @@ export function* can<
 }
 
 export const define =
-  <T extends Record<string, StandardSchemaV1>>(capabilities: T) =>
+  <T extends Registry>(capabilities: T) =>
   (genCapabilities: () => Generator<[string, Check], void, T>) => {
     const it = genCapabilities();
 

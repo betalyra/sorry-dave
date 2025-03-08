@@ -2,7 +2,7 @@ import { describe, expect } from "vitest";
 import { it } from "@effect/vitest";
 
 import { z } from "zod";
-import { define, check, allowed, can, Denied } from "./ability";
+import { define, check, allowed, can, Denied, Registry } from "./ability";
 import { Data, Effect, Either } from "effect";
 import { TestServices } from "effect/TestServices";
 
@@ -19,7 +19,7 @@ describe("Ability", () => {
   });
   type User = z.infer<typeof User>;
 
-  const schema = {
+  const schema: Registry = {
     "read-article": Article,
     "read-blog": Blog,
     "write-article": Article,
