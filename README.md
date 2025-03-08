@@ -32,12 +32,12 @@ yarn add @betalyra/sorry-dave
 
 ## Usage
 
-Declare a schema for your capabilities using any standard-schema compliant library, e.g. [zod](https://zod.dev/).
+Declare a schema for your capabilities using any [standard-schema](https://github.com/standard-schema/standard-schema) compliant library, e.g. [zod](https://zod.dev/).
 
 ```ts
 import { z } from "zod";
 
-// Define your model
+// Define your domain model
 const Article = z.object({
   article: z.literal("article"),
   authorId: z.string(),
@@ -45,9 +45,11 @@ const Article = z.object({
 const Blog = z.object({ blog: z.literal("blog") });
 const User = z.object({ id: z.string() });
 type User = z.infer<typeof User>;
-  
-// Define your capabilities using ${key}-${resource} naming convention
-const Capabilities = z.object({
+
+``` 
+Next, register your schemas using the `${key}-${resource}` naming convention.
+```ts
+const registry = z.object({
   "read-article": Article,
   "read-blog": Blog,
   "write-article": Article,
@@ -55,15 +57,15 @@ const Capabilities = z.object({
 });
 ```
 
-Define the capabilities that the user has.
-
+Next, define a set of capabilities from the registry that your entity (the user) has.
 ```ts
 const capabilities = (user: User) =>
-    define(schema)(function* () {
+    define(registry)(function* () {
       yield* can("read-article"); // Anyone can read an article
       yield* can("read-blog"); // Anyone can read a blog
+      // Add a condition to the capability
       yield* can("write-article", (input) =>  input.authorId === user.id); // Only the author can write an article
-      yield* can("write-blog", (input) => Effect.sync(() => input.authorId === user.id)); // Can also use Effects in the conditions
+      yield* can("write-blog", (input) => Effect.sync(() => input.authorId === user.id)); // You can also use Effects in conditions
     });
 ```
 
