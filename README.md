@@ -15,7 +15,7 @@ A simple authorisation library for [effect-ts](https://effect.website).
  ## Installation
 
 ```bash
-pnpm i https://pkg.pr.new/betalyra/sorry-dave/@betalyra/sorry-dave@4f92a01
+pnpm i https://pkg.pr.new/betalyra/sorry-dave/@betalyra/sorry-dave@4ea2ba7
 ``` 
 
 Npm registry packages coming soon...
@@ -45,7 +45,7 @@ const User = z.object({ id: z.string() });
 type User = z.infer<typeof User>;
 ``` 
 
-Next, register your schemas. Keys must be lowercase in the form of action-resource.
+Next, register your schemas. Keys must be lowercase in the form of *action-resource*.
 
 ```ts
 const registry = register({
