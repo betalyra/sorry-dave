@@ -4,6 +4,12 @@
 
 A simple authorisation library for [effect-ts](https://effect.website).
 
+
+
+https://github.com/user-attachments/assets/071ffe2e-1993-458c-8cc8-a13b640220cb
+
+
+
 ## Features
 
 * 🔒 Type-safe
