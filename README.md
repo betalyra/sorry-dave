@@ -49,12 +49,12 @@ type User = z.infer<typeof User>;
 ``` 
 Next, register your schemas using the `${key}-${resource}` naming convention.
 ```ts
-const registry = z.object({
+const registry = {
   "read-article": Article,
   "read-blog": Blog,
   "write-article": Article,
   "write-blog": Blog,
-});
+};
 ```
 
 Next, define a set of capabilities from the registry that your entity (the user) has.
@@ -85,7 +85,7 @@ yield* check(capabilities(user))(function* () {
 **Invalid case**
 ```ts
 const user = { id: "1" };
-const article = { article: "article" as const, authorId: "2" };
+const article = { article: "article" as const, authorId: "2" }; // The authorId does not match the user's id
 // Will fail with a Denied error
 yield* check(capabilities(user))(function* () {
   yield* allowed("read-article", article);
