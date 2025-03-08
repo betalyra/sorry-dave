@@ -35,5 +35,3 @@ jobs:
 
       - name: Publish
         run: pnpm dlx pkg-pr-new publish
-        env:
-          NPM_TOKEN: ""
