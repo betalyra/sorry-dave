@@ -2,48 +2,106 @@
 import { StandardSchemaV1 } from "@standard-schema/spec";
 import { z } from "zod";
 
+type Check = (input: StandardSchemaV1.InferInput<StandardSchemaV1>) => boolean;
+
 function* can<
   T extends Record<`${string}-${string}`, StandardSchemaV1<any, any>>,
   K extends keyof T
 >(
   key: K,
   // @ts-ignore
-  check: (input: StandardSchemaV1.InferInput<T[K]>) => boolean
-): Generator<string, undefined, T> {
-  yield `Can ${key as string}`;
+  check?: (input: StandardSchemaV1.InferInput<T[K]>) => boolean
+): Generator<[K, Check], undefined, T> {
+  const c = (check ?? (() => true)) as Check;
+  yield [key, c];
   return;
 }
 
 const gen =
-  <T extends Record<string, StandardSchemaV1>>(record: T) =>
-  (genCapabilities: () => Generator<string, void, T>) => {
+  <T extends Record<string, StandardSchemaV1>>(capabilities: T) =>
+  (genCapabilities: () => Generator<[string, Check], void, T>) => {
     const it = genCapabilities();
 
-    let items = [];
+    let checks = new Map<string, Check>();
     while (true) {
-      const next = it.next(record);
+      const next = it.next(capabilities);
       if (next.done) {
         break;
       }
-      items.push(next.value);
+      const [key, check] = next.value;
+      checks.set(key, check);
     }
-    return items;
+    return { checks, capabilities };
   };
 
-const Article = z.object({ article: z.literal("article") });
+type Capabilities<T extends Record<string, StandardSchemaV1>> = {
+  checks: Map<string, Check>;
+  capabilities: T;
+};
+
+const check =
+  <T extends Record<string, StandardSchemaV1>>(capabilities: Capabilities<T>) =>
+  (genCapabilities: () => Generator<[string, any], void, T>) => {
+    const it = genCapabilities();
+
+    const checks = capabilities.checks;
+    let checkResult = true;
+    while (true) {
+      const next = it.next(capabilities.capabilities);
+      if (next.done) {
+        break;
+      }
+      const [key, item] = next.value;
+      const check = checks.get(key);
+      if (check) {
+        checkResult = checkResult && check(item);
+      }
+      if (!checkResult) {
+        break;
+      }
+    }
+    return checkResult;
+  };
+
+function* isAllowed<
+  T extends Record<`${string}-${string}`, StandardSchemaV1<any, any>>,
+  K extends keyof T,
+  // @ts-ignore
+  I extends StandardSchemaV1.InferInput<T[K]>
+>(key: K, item: I): Generator<[K, I], undefined, T> {
+  yield [key, item];
+  return;
+}
+const Article = z.object({
+  article: z.literal("article"),
+  authorId: z.string(),
+});
 const Blog = z.object({ blog: z.literal("blog") });
 
-const article = { article: "article" as const };
+const article = { article: "article" as const, authorId: "2" };
 const blog = { blog: "blog" as const };
 
-const result = gen({
+const allCapabilities = {
   "read-article": Article,
   "read-blog": Blog,
   "write-article": Article,
-})(function* () {
-  yield* can("read-article", (input) => input.article === "article");
-  yield* can("read-blog", (input) => input.blog === "blog");
-  yield* can("write-article", (input) => input.article === "article");
-});
+};
 
+const User = z.object({
+  id: z.string(),
+});
+type User = z.infer<typeof User>;
+const user = { id: "1" };
+
+const capabilities = (user: User) =>
+  gen(allCapabilities)(function* () {
+    yield* can("read-article");
+    yield* can("read-blog");
+    yield* can("write-article", (input) => input.authorId === user.id);
+  });
+
+const result = check(capabilities(user))(function* () {
+  yield* isAllowed("read-article", article);
+  yield* isAllowed("write-article", article);
+});
 console.log(result);
