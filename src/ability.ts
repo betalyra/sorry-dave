@@ -1,5 +1,6 @@
 // Generator that takes a key parameter and expects records with that key
 import { StandardSchemaV1 } from "@standard-schema/spec";
+import { Data, Effect } from "effect";
 import { z } from "zod";
 
 type Check = (input: StandardSchemaV1.InferInput<StandardSchemaV1>) => boolean;
@@ -39,31 +40,42 @@ type Capabilities<T extends Record<string, StandardSchemaV1>> = {
   capabilities: T;
 };
 
+type CheckResult = {
+  passed: string[];
+};
+
+class Denied extends Data.Error<{ key: string; message: string }> {}
+
 const check =
   <T extends Record<string, StandardSchemaV1>>(capabilities: Capabilities<T>) =>
-  (genCapabilities: () => Generator<[string, any], void, T>) => {
-    const it = genCapabilities();
+  (
+    genCapabilities: () => Generator<[string, any], void, T>
+  ): Effect.Effect<CheckResult, Denied> =>
+    Effect.gen(function* () {
+      const it = genCapabilities();
 
-    const checks = capabilities.checks;
-    let checkResult = true;
-    while (true) {
-      const next = it.next(capabilities.capabilities);
-      if (next.done) {
-        break;
+      const checks = capabilities.checks;
+      let passed: string[] = [];
+      let canResult = true;
+      while (true) {
+        const next = it.next(capabilities.capabilities);
+        if (next.done) {
+          break;
+        }
+        const [key, item] = next.value;
+        const check = checks.get(key);
+        if (check) {
+          passed.push(key);
+          canResult = canResult && check(item);
+        }
+        if (!canResult) {
+          yield* new Denied({ key, message: `Denied: ${key}` });
+        }
       }
-      const [key, item] = next.value;
-      const check = checks.get(key);
-      if (check) {
-        checkResult = checkResult && check(item);
-      }
-      if (!checkResult) {
-        break;
-      }
-    }
-    return checkResult;
-  };
+      return { passed };
+    });
 
-function* isAllowed<
+function* allowed<
   T extends Record<`${string}-${string}`, StandardSchemaV1<any, any>>,
   K extends keyof T,
   // @ts-ignore
@@ -78,21 +90,21 @@ const Article = z.object({
 });
 const Blog = z.object({ blog: z.literal("blog") });
 
-const article = { article: "article" as const, authorId: "2" };
 const blog = { blog: "blog" as const };
+
+const User = z.object({
+  id: z.string(),
+});
+type User = z.infer<typeof User>;
+
+const user = { id: "1" };
+const article = { article: "article" as const, authorId: "2" };
 
 const allCapabilities = {
   "read-article": Article,
   "read-blog": Blog,
   "write-article": Article,
 };
-
-const User = z.object({
-  id: z.string(),
-});
-type User = z.infer<typeof User>;
-const user = { id: "1" };
-
 const capabilities = (user: User) =>
   gen(allCapabilities)(function* () {
     yield* can("read-article");
@@ -100,8 +112,10 @@ const capabilities = (user: User) =>
     yield* can("write-article", (input) => input.authorId === user.id);
   });
 
-const result = check(capabilities(user))(function* () {
-  yield* isAllowed("read-article", article);
-  yield* isAllowed("write-article", article);
+const checkResult = check(capabilities(user))(function* () {
+  yield* allowed("read-article", article);
+  yield* allowed("write-article", article);
 });
+
+const result = await Effect.runPromise(checkResult.pipe(Effect.either));
 console.log(result);
