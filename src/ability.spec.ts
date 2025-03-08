@@ -2,7 +2,7 @@ import { describe, expect } from "vitest";
 import { it } from "@effect/vitest";
 
 import { z } from "zod";
-import { define, check, allowed, can, Denied, register } from "./ability";
+import { define, check, allowed, can, Denied, register, crud } from "./ability";
 import { Data, Effect, Either } from "effect";
 import { TestServices } from "effect/TestServices";
 
@@ -123,5 +123,27 @@ describe("Ability", () => {
         const result = yield* checkResult.pipe(Effect.either);
         expect(result).toEqual(Either.left(new TestError({ message: "test" })));
       })
+  );
+
+  it.effect("should support crud", () =>
+    Effect.gen(function* () {
+      const user = { id: "1" };
+      const blog = { blog: "blog" as const, authorId: "1" };
+
+      const registry = register({
+        ...crud("blog", Blog),
+        ...crud("article", Article),
+      });
+      const capabilities = define(registry)(function* () {
+        yield* can("create-blog");
+        yield* can("read-blog");
+        yield* can("update-blog");
+        yield* can("delete-blog");
+        yield* can("create-article");
+        yield* can("read-article");
+        yield* can("update-article");
+        yield* can("delete-article");
+      });
+    })
   );
 });

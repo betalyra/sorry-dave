@@ -21,6 +21,26 @@ export const register = <T extends Record<string, StandardSchemaV1>>(
   return schema as any;
 };
 
+export const crud = <R extends `${Lowercase<string>}`, Input, Output>(
+  resource: R,
+  schema: StandardSchemaV1<Input, Output>
+) => {
+  type CrudOperations = {
+    readonly [K in
+      | "read"
+      | "create"
+      | "update"
+      | "delete" as `${K}-${R}`]: StandardSchemaV1<Input, Output>;
+  };
+
+  return {
+    [`read-${resource}`]: schema,
+    [`create-${resource}`]: schema,
+    [`update-${resource}`]: schema,
+    [`delete-${resource}`]: schema,
+  } as CrudOperations;
+};
+
 export type Check = (
   input: StandardSchemaV1.InferInput<StandardSchemaV1>
 ) => boolean | Effect.Effect<boolean>;
