@@ -18,7 +18,7 @@ A simple authorisation library for [effect-ts](https://effect.website).
 pnpm i https://pkg.pr.new/betalyra/sorry-dave/@betalyra/sorry-dave@4f92a01
 ``` 
 
-Npm publishing coming soon...
+Npm registry packages coming soon...
 ```bash
 # npm
 npm install @betalyra/sorry-dave
@@ -51,6 +51,7 @@ const Capabilities = z.object({
   "read-article": Article,
   "read-blog": Blog,
   "write-article": Article,
+  "write-blog": Blog,
 });
 ```
 
@@ -59,19 +60,20 @@ Define the capabilities that the user has.
 ```ts
 const capabilities = (user: User) =>
     define(schema)(function* () {
-      yield* can("read-article");
-      yield* can("read-blog");
-      yield* can("write-article", (input) => Effect.sync(() => input.authorId === user.id)); // return an Effect<boolean> or boolean
+      yield* can("read-article"); // Anyone can read an article
+      yield* can("read-blog"); // Anyone can read a blog
+      yield* can("write-article", (input) =>  input.authorId === user.id); // Only the author can write an article
+      yield* can("write-blog", (input) => Effect.sync(() => input.authorId === user.id)); // Can also use Effects in the conditions
     });
 ```
 
-Check if the user has access to the resource.
+Validate if the user has access to a resource by yielding the check
 
 **Valid case**
 ```ts
 const user = { id: "1" };
 const article = { article: "article" as const, authorId: "1" };
-// Will fail with a Denied error if the user does not have access to the resource
+
 yield* check(capabilities(user))(function* () {
   yield* allowed("read-article", article);
   yield* allowed("write-article", article);
