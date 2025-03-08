@@ -5,58 +5,9 @@ on:
       - "**"
     tags:
       - "!**"
-  pull_request_review:
-    types: [submitted]
 
 jobs:
-  check:
-    # First, trigger a permissions check on the user approving the pull request.
-    if: github.event.review.state == 'approved'
-    runs-on: ubuntu-latest
-    outputs:
-      has-permissions: ${{ steps.checkPermissions.outputs.require-result }}
-    steps:
-      - name: Check permissions
-        id: checkPermissions
-        uses: actions-cool/check-user-permission@v2
-        with:
-          # In this example, the approver must have the write access
-          # to the repository to trigger the package preview.
-          require: "write"
-  build:
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - uses: pnpm/action-setup@v4
-        name: Install pnpm
-        with:
-          version: 10
-          run_install: false
-
-      - name: Use Latest Corepack
-        run: |
-          echo "Before: corepack version => $(corepack --version || echo 'not installed')"
-          npm install -g corepack@latest
-          echo "After : corepack version => $(corepack --version)"
-          corepack enable
-          pnpm --version
-
-      - name: Install dependencies
-        run: pnpm install
-
-      - name: Build
-        run: pnpm build
-
-      - name: Test
-        run: pnpm test
-
-  publish:
-    needs: check
-    # Publish the preview package only if the permissions check passed.
-    if: needs.check.outputs.has-permissions == 'true'
+  build-publish:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
