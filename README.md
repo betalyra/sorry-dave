@@ -97,3 +97,11 @@ yield* check(capabilities(user))(function* () {
   yield* allowed("write-article", article);
 });
 ```
+
+## Credits
+
+This library was heavily inspired by [CASL](https://casl.js.org/v6/en/).
+
+## License
+
+[MIT](./LICENSE.md)
