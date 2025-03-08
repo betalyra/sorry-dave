@@ -36,7 +36,7 @@ pnpm add @betalyra/sorry-dave
 yarn add @betalyra/sorry-dave
 ```
 
-## Usage
+## Getting started
 
 Declare a schema for your capabilities using any [standard-schema](https://github.com/standard-schema/standard-schema) compliant library, e.g. [zod](https://zod.dev/).
 
@@ -95,6 +95,17 @@ const article = { article: "article" as const, authorId: "2" }; // The authorId 
 yield* check(capabilities(user))(function* () {
   yield* allowed("read-article", article);
   yield* allowed("write-article", article);
+});
+```
+
+## Advanced usage
+
+### CRUD
+You can easily register CRUD actions using the `crud` helper:
+```ts
+const registry = register({
+  ...crud("blog", Blog),
+  ...crud("article", Article),
 });
 ```
 
