@@ -1,8 +1,7 @@
 {
-    "extends": "@total-typescript/tsconfig/tsc/no-dom/app", // For an app
+    "extends": "@total-typescript/tsconfig/tsc/no-dom/library", // For a library
     "compilerOptions": {
         "lib": [
-            "DOM",
             "ESNext"
         ],
         "target": "ESNext",
@@ -10,8 +9,16 @@
         "moduleResolution": "Node",
         "strict": true,
         "esModuleInterop": true,
-        "skipLibCheck": false,
+        "skipLibCheck": true,
         "forceConsistentCasingInFileNames": true,
-        "verbatimModuleSyntax": false
-    }
+        "verbatimModuleSyntax": false,
+        "outDir": "dist"
+    },
+    "exclude": [
+        "**/*.spec.ts",
+        "**/*.test.ts",
+        "**/__tests__/**",
+        "node_modules",
+        "dist"
+    ]
 }
