@@ -15,6 +15,11 @@ A simple authorisation library for [effect-ts](https://effect.website).
  ## Installation
 
 ```bash
+pnpm i https://pkg.pr.new/betalyra/sorry-dave/@betalyra/sorry-dave@4f92a01
+``` 
+
+Npm publishing coming soon...
+```bash
 # npm
 npm install @betalyra/sorry-dave
 
@@ -54,9 +59,9 @@ Define the capabilities that the user has.
 ```ts
 const capabilities = (user: User) =>
     define(schema)(function* () {
-        yield* can("read-article");
-        yield* can("read-blog");
-        yield* can("write-article", (input) => input.authorId === user.id);
+      yield* can("read-article");
+      yield* can("read-blog");
+      yield* can("write-article", (input) => Effect.sync(() => input.authorId === user.id)); // return an Effect<boolean> or boolean
     });
 ```
 
@@ -67,7 +72,7 @@ const user = { id: "1" };
 const article = { article: "article" as const, authorId: "1" };
 // Will fail with a Denied error if the user does not have access to the resource
 yield* check(capabilities(user))(function* () {
-        yield* allowed("read-article", article);
-        yield* allowed("write-article", article);
-      });
+  yield* allowed("read-article", article);
+  yield* allowed("write-article", article);
+});
 ```
