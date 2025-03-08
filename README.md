@@ -35,8 +35,6 @@ yarn add @betalyra/sorry-dave
 Declare a schema for your capabilities using any [standard-schema](https://github.com/standard-schema/standard-schema) compliant library, e.g. [zod](https://zod.dev/).
 
 ```ts
-import { z } from "zod";
-
 // Define your domain model
 const Article = z.object({
   article: z.literal("article"),
@@ -45,16 +43,17 @@ const Article = z.object({
 const Blog = z.object({ blog: z.literal("blog"), authorId: z.string() });
 const User = z.object({ id: z.string() });
 type User = z.infer<typeof User>;
-
 ``` 
-Next, register your schemas using the `${key}-${resource}` naming convention.
+
+Next, register your schemas. Keys must be lowercase in the form of action-resource.
+
 ```ts
-const registry = {
+const registry = register({
   "read-article": Article,
   "read-blog": Blog,
   "write-article": Article,
   "write-blog": Blog,
-};
+});
 ```
 
 Next, define a set of capabilities from the registry that your entity (the user) has.

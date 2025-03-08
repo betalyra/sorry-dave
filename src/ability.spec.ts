@@ -2,7 +2,7 @@ import { describe, expect } from "vitest";
 import { it } from "@effect/vitest";
 
 import { z } from "zod";
-import { define, check, allowed, can, Denied } from "./ability";
+import { define, check, allowed, can, Denied, register } from "./ability";
 import { Data, Effect, Either } from "effect";
 import { TestServices } from "effect/TestServices";
 
@@ -19,14 +19,14 @@ describe("Ability", () => {
   });
   type User = z.infer<typeof User>;
 
-  const schema = {
+  const registry = register({
     "read-article": Article,
     "read-blog": Blog,
     "write-article": Article,
     "write-blog": Blog,
-  };
+  });
   const capabilities = (user: User) =>
-    define(schema)(function* () {
+    define(registry)(function* () {
       yield* can("read-article");
       yield* can("read-blog");
       yield* can("write-article", (input) => input.authorId === user.id);
@@ -80,7 +80,7 @@ describe("Ability", () => {
 
         let counter = 0;
         const capabilities = (user: User) =>
-          define(schema)(function* () {
+          define(registry)(function* () {
             yield* can("write-blog", (input) =>
               Effect.sync(() => {
                 counter++;
@@ -107,7 +107,7 @@ describe("Ability", () => {
         const blog = { blog: "blog" as const, authorId: "1" };
 
         const capabilities = (user: User) =>
-          define(schema)(function* () {
+          define(registry)(function* () {
             yield* can("write-blog", (input) =>
               Effect.gen(function* () {
                 yield* Effect.fail(new TestError({ message: "test" }));

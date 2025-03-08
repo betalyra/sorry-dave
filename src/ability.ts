@@ -1,6 +1,26 @@
 import { StandardSchemaV1 } from "@standard-schema/spec";
 import { Data, Effect, Either } from "effect";
 
+// Define a type constraint for valid keys
+export type ValidKey = `${Lowercase<string>}-${Lowercase<string>}`;
+
+// Define a generic schema type that enforces key and value constraints
+export type SchemaDefinition = Record<ValidKey, StandardSchemaV1>;
+
+// Extract the specific heterogeneous type from a schema object
+export type ExtractSchemaType<T extends SchemaDefinition> = {
+  [K in keyof T]: T[K];
+};
+
+// Function that accepts a schema and extracts its concrete type
+export const register = <T extends Record<string, StandardSchemaV1>>(
+  schema: T & { [K in keyof T]: K extends ValidKey ? unknown : never }
+): ExtractSchemaType<
+  T & { [K in keyof T]: K extends ValidKey ? unknown : never }
+> => {
+  return schema as any;
+};
+
 export type Check = (
   input: StandardSchemaV1.InferInput<StandardSchemaV1>
 ) => boolean | Effect.Effect<boolean>;
@@ -23,18 +43,26 @@ export function* can<
 }
 
 export const define =
-  <T extends Record<string, StandardSchemaV1>>(capabilities: T) =>
-  (genCapabilities: () => Generator<[string, Check], void, T>) => {
+  <T extends Record<string, StandardSchemaV1>>(
+    capabilities: T & { [K in keyof T]: K extends ValidKey ? unknown : never }
+  ) =>
+  (
+    genCapabilities: () => Generator<
+      [keyof ExtractSchemaType<typeof capabilities>, Check],
+      void,
+      typeof capabilities
+    >
+  ) => {
     const it = genCapabilities();
 
     let checks = new Map<string, Check>();
     while (true) {
-      const next = it.next(capabilities);
+      const next = it.next(capabilities as any);
       if (next.done) {
         break;
       }
       const [key, check] = next.value;
-      checks.set(key, check);
+      checks.set(key as string, check);
     }
     return { checks, capabilities };
   };
