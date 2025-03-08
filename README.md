@@ -42,7 +42,7 @@ const Article = z.object({
   article: z.literal("article"),
   authorId: z.string(),
 });
-const Blog = z.object({ blog: z.literal("blog") });
+const Blog = z.object({ blog: z.literal("blog"), authorId: z.string() });
 const User = z.object({ id: z.string() });
 type User = z.infer<typeof User>;
 
