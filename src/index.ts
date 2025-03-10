@@ -1,5 +1,5 @@
 // Core functionality
-export { check, define, can, allowed, register } from "./ability";
+export { check, define, can, allowed, register, crud } from "./ability";
 
 // Type definitions
 export type {
@@ -8,6 +8,7 @@ export type {
   CheckResult,
   ValidKey,
   SchemaDefinition,
+  ExtractSchemaType,
 } from "./ability";
 
 // Error classes
