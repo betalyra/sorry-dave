@@ -1,5 +1,5 @@
 // Core functionality
-export { check, define, can, allowed, register, crud } from "./ability";
+export { check, define, can, allowed, register, crud } from "./ability.js";
 
 // Type definitions
 export type {
@@ -9,7 +9,7 @@ export type {
   ValidKey,
   SchemaDefinition,
   ExtractSchemaType,
-} from "./ability";
+} from "./ability.js";
 
 // Error classes
-export { Denied } from "./ability";
+export { Denied } from "./ability.js";
