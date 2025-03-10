@@ -21,11 +21,6 @@ https://github.com/user-attachments/assets/071ffe2e-1993-458c-8cc8-a13b640220cb
  ## Installation
 
 ```bash
-pnpm i https://pkg.pr.new/betalyra/sorry-dave/@betalyra/sorry-dave@4ea2ba7
-``` 
-
-Npm registry packages coming soon...
-```bash
 # npm
 npm install @betalyra/sorry-dave
 
