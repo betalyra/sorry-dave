@@ -2,18 +2,8 @@ import { describe, expect } from "vitest";
 import { it } from "@effect/vitest";
 
 import { z } from "zod";
-import {
-  define,
-  check,
-  allowed,
-  can,
-  Denied,
-  register,
-  crud,
-  ExtractErrorTypes,
-} from "./ability";
-import { Data, Effect, Either } from "effect";
-import { TestServices } from "effect/TestServices";
+import { define, check, allowed, can, Denied, register, crud } from "./ability";
+import { Context, Data, Effect, Either, Layer, Logger, LogLevel } from "effect";
 
 class TestError extends Data.Error<{ message: string }> {}
 class TestError2 extends Data.Error<{ message: string }> {}
@@ -28,23 +18,30 @@ const User = z.object({
 });
 type User = z.infer<typeof User>;
 
-describe("Ability", () => {
-  const registry = register({
-    "read-article": Article,
-    "read-blog": Blog,
-    "write-article": Article,
-    "write-blog": Blog,
-  });
-  const capabilities = (user: User) =>
-    define(registry)(function* () {
-      yield* can("read-article");
-      yield* can("read-blog");
-      yield* can("write-article", (input) => input.authorId === user.id);
-      yield* can("write-blog", (input) =>
-        Effect.sync(() => input.authorId === user.id)
-      );
-    });
+// Declaring a tag for a service that generates random numbers
+class Random extends Context.Tag("MyRandomService")<
+  Random,
+  { readonly next: Effect.Effect<number> }
+>() {}
 
+const registry = register({
+  "read-article": Article,
+  "read-blog": Blog,
+  "write-article": Article,
+  "write-blog": Blog,
+});
+
+const capabilities = (user: User) =>
+  define(registry)(function* () {
+    yield* can("read-article");
+    yield* can("read-blog");
+    yield* can("write-article", (input) => input.authorId === user.id);
+    yield* can("write-blog", (input) =>
+      Effect.sync(() => input.authorId === user.id)
+    );
+  });
+
+describe("Ability", () => {
   it.effect("should pass if the user has access to the resource", () =>
     Effect.gen(function* () {
       const user = { id: "1" };
@@ -90,11 +87,10 @@ describe("Ability", () => {
 
         let counter = 0;
         const capabilities = (user: User) =>
-          define(registry)(function* () {
+          define(registry)<never, never>(function* () {
             yield* can("write-blog", (input) =>
               Effect.sync(() => {
                 counter++;
-                console.log("counter", counter);
                 return input.authorId === user.id;
               })
             );
@@ -200,6 +196,47 @@ describe("Ability", () => {
 
       const result = yield* checkResult.pipe(Effect.either);
       expect(result).toEqual(Either.left(new TestError2({ message: "test" })));
+    })
+  );
+  it.effect("should support return resource types ", () =>
+    Effect.gen(function* () {
+      const user = { id: "1" };
+      const blog = { blog: "blog" as const, authorId: "1" };
+
+      const registry = register({
+        ...crud("blog", Blog),
+      });
+      const capabilities = define(registry)(function* () {
+        yield* can("create-blog", (x) =>
+          Effect.gen(function* () {
+            const { next } = yield* Random;
+
+            const value = yield* next;
+            yield* Effect.logInfo(`Random value: ${value}`);
+            return value > 0;
+          })
+        );
+      });
+
+      const checkResult = check(capabilities)(function* () {
+        yield* allowed("create-blog", { blog: "blog" as const, authorId: "1" });
+      });
+
+      const StaticRandom = Layer.succeed(Random)({
+        next: Effect.succeed(1),
+      });
+
+      const result = yield* checkResult.pipe(
+        Effect.provide(
+          Layer.mergeAll(
+            StaticRandom,
+            Logger.pretty,
+            Logger.minimumLogLevel(LogLevel.Info)
+          )
+        ),
+        Effect.either
+      );
+      expect(result).toEqual(Either.right({ passed: ["create-blog"] }));
     })
   );
 });

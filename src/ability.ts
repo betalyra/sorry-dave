@@ -41,22 +41,23 @@ export const crud = <R extends `${Lowercase<string>}`, Input, Output>(
   } as CrudOperations;
 };
 
-export type Check<E> = (
+export type Check<E, R> = (
   input: StandardSchemaV1.InferInput<StandardSchemaV1>
-) => boolean | Effect.Effect<boolean, E>;
+) => boolean | Effect.Effect<boolean, E, R>;
 
 export function* can<
   T extends Record<`${string}-${string}`, StandardSchemaV1<any, any>>,
   K extends keyof T,
-  E = never
+  E = never,
+  R = never
 >(
   key: K,
   check?: (
     // @ts-ignore
     input: StandardSchemaV1.InferInput<T[K]>
-  ) => boolean | Effect.Effect<boolean, E>
-): Generator<[K, Check<E>], void, T> {
-  const c = (check ?? (() => true)) as Check<E>;
+  ) => boolean | Effect.Effect<boolean, E, R>
+): Generator<[K, Check<E, R>], void, T> {
+  const c = (check ?? (() => true)) as Check<E, R>;
   yield [key, c];
   return;
 }
@@ -65,29 +66,29 @@ export const define =
   <T extends Record<string, StandardSchemaV1>>(
     capabilities: T & { [K in keyof T]: K extends ValidKey ? unknown : never }
   ) =>
-  <E>(
+  <E = never, R = never>(
     genCapabilities: () => Generator<
-      [keyof ExtractSchemaType<typeof capabilities>, Check<E>],
+      [keyof ExtractSchemaType<typeof capabilities>, Check<E, R>],
       void,
       typeof capabilities
     >
-  ): Capabilities<T, E> => {
+  ): Capabilities<T, E, R> => {
     const it = genCapabilities();
 
-    let checks = new Map<string, Check<E>>();
+    let checks = new Map<string, Check<E, R>>();
     while (true) {
       const next = it.next(capabilities as any);
       if (next.done) {
         break;
       }
       const [key, check] = next.value;
-      checks.set(key as string, check as Check<E>);
+      checks.set(key as string, check as Check<E, R>);
     }
     return { checks, capabilities };
   };
 
-export type Capabilities<T extends Record<string, StandardSchemaV1>, E> = {
-  checks: Map<string, Check<E>>;
+export type Capabilities<T extends Record<string, StandardSchemaV1>, E, R> = {
+  checks: Map<string, Check<E, R>>;
   capabilities: T;
 };
 
@@ -98,12 +99,12 @@ export type CheckResult = {
 export class Denied extends Data.Error<{ key: string; message: string }> {}
 
 export const check =
-  <E, T extends Record<string, StandardSchemaV1>>(
-    capabilities: Capabilities<T, E>
+  <E, R, T extends Record<string, StandardSchemaV1>>(
+    capabilities: Capabilities<T, E, R>
   ) =>
   (
     genCapabilities: () => Generator<[string, any], void, T>
-  ): Effect.Effect<CheckResult, Denied | E> =>
+  ): Effect.Effect<CheckResult, Denied | E, R> =>
     Effect.gen(function* () {
       const it = genCapabilities();
 
@@ -140,9 +141,9 @@ export function* allowed<
   return;
 }
 
-// Helper type to extract all error types from your Generator
-export type ExtractErrorTypes<T> = T extends Generator<infer Yield, any, any>
-  ? Yield extends [string, Check<infer Error>]
-    ? Error
-    : never
-  : never;
+// // Helper type to extract all error types from your Generator
+// export type ExtractErrorTypes<T> = T extends Generator<infer Yield, any, any>
+//   ? Yield extends [string, Check<infer Error, infer Return>]
+//     ? Error
+//     : never
+//   : never;
