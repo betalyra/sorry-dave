@@ -2,23 +2,33 @@ import { describe, expect } from "vitest";
 import { it } from "@effect/vitest";
 
 import { z } from "zod";
-import { define, check, allowed, can, Denied, register, crud } from "./ability";
+import {
+  define,
+  check,
+  allowed,
+  can,
+  Denied,
+  register,
+  crud,
+  ExtractErrorTypes,
+} from "./ability";
 import { Data, Effect, Either } from "effect";
 import { TestServices } from "effect/TestServices";
 
 class TestError extends Data.Error<{ message: string }> {}
+class TestError2 extends Data.Error<{ message: string }> {}
+
+const Article = z.object({
+  article: z.literal("article"),
+  authorId: z.string(),
+});
+const Blog = z.object({ blog: z.literal("blog"), authorId: z.string() });
+const User = z.object({
+  id: z.string(),
+});
+type User = z.infer<typeof User>;
 
 describe("Ability", () => {
-  const Article = z.object({
-    article: z.literal("article"),
-    authorId: z.string(),
-  });
-  const Blog = z.object({ blog: z.literal("blog"), authorId: z.string() });
-  const User = z.object({
-    id: z.string(),
-  });
-  type User = z.infer<typeof User>;
-
   const registry = register({
     "read-article": Article,
     "read-blog": Blog,
@@ -144,6 +154,52 @@ describe("Ability", () => {
         yield* can("update-article");
         yield* can("delete-article");
       });
+    })
+  );
+  it.effect("should support error types (I)", () =>
+    Effect.gen(function* () {
+      const ttRegistry = register({
+        ...crud("blog", Blog),
+      });
+      const ttFunc = function* () {
+        yield* can("create-blog", (x) =>
+          Effect.fail(new TestError({ message: "test" }))
+        );
+        yield* can("read-blog", (x) =>
+          Effect.fail(new TestError2({ message: "test" }))
+        );
+      };
+      const capabilities = define(ttRegistry)<TestError | TestError2>(ttFunc);
+
+      const checkResult = check(capabilities)(function* () {
+        yield* allowed("create-blog", { blog: "blog" as const, authorId: "1" });
+        yield* allowed("read-blog", { blog: "blog" as const, authorId: "1" });
+      });
+
+      const result = yield* checkResult.pipe(Effect.either);
+      expect(result).toEqual(Either.left(new TestError({ message: "test" })));
+    })
+  );
+  it.effect("should support error types (II)", () =>
+    Effect.gen(function* () {
+      const ttRegistry = register({
+        ...crud("blog", Blog),
+      });
+      const ttFunc = function* () {
+        yield* can("create-blog", (x) => Effect.succeed(true));
+        yield* can("read-blog", (x) =>
+          Effect.fail(new TestError2({ message: "test" }))
+        );
+      };
+      const capabilities = define(ttRegistry)<TestError | TestError2>(ttFunc);
+
+      const checkResult = check(capabilities)(function* () {
+        yield* allowed("create-blog", { blog: "blog" as const, authorId: "1" });
+        yield* allowed("read-blog", { blog: "blog" as const, authorId: "1" });
+      });
+
+      const result = yield* checkResult.pipe(Effect.either);
+      expect(result).toEqual(Either.left(new TestError2({ message: "test" })));
     })
   );
 });
